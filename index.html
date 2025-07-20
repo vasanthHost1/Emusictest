@@ -52,7 +52,7 @@
 
     #unmuteBtn {
       margin-top: 20px;
-      display: inline-block;
+      display: inline-block; /* always visible */
       padding: 10px 20px;
       background: #007bff;
       color: white;
@@ -117,7 +117,7 @@
     }
 
     function onPlayerReady(event) {
-      // Ready
+      // Player is ready
     }
 
     function hideAndSearch() {
@@ -162,15 +162,14 @@
           isFirstClick = false;
         }
         player.loadVideoById(videoId);
-        player.mute();
-        document.getElementById('unmuteBtn').style.display = 'inline-block';
+        player.mute(); // Start muted
 
-        // Set low quality
+        // Set lowest quality
         setTimeout(() => {
           try {
-            player.setPlaybackQuality('tiny');
+            player.setPlaybackQuality('tiny'); // 144p
           } catch (err) {
-            console.warn("Quality not set:", err);
+            console.warn("Could not set quality:", err);
           }
         }, 1000);
       }
