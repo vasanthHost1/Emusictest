@@ -38,24 +38,15 @@
       cursor: pointer;
     }
 
-    #playerContainer {
-      margin-top: 30px;
-    }
-
     #player {
-      width: 90%;
-      max-width: 640px;
+      width: 100%;
       height: 360px;
-      margin: 0 auto;
-      margin-top: 10px;
-      display: block;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      margin-left: -9999px; /* hide iframe */
     }
 
     #songTitle {
       font-size: 18px;
-      margin-top: 15px;
+      margin-top: 30px;
       font-weight: bold;
     }
 
@@ -88,27 +79,27 @@
     <button onclick="hideAndSearch()">Search</button>
   </div>
 
-  <div id="playerContainer">
-    <div id="songTitle">No song playing</div>
-    <div id="player"></div>
+  <div id="songTitle">No song playing</div>
+  <div id="player"></div>
 
-    <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+  <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
 
-    <div id="volumeControl">
-      <label for="volumeSlider">🔊 Volume: </label>
-      <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
-    </div>
+  <div id="volumeControl">
+    <label for="volumeSlider">🔊 Volume:</label>
+    <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
   </div>
 
   <script>
     let player;
     let isFirstClick = true;
-    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y";
+    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y"; // Your YouTube Data API key
 
+    // Load YouTube IFrame API
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
+    // Create YouTube Player
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
         height: '360',
@@ -126,7 +117,7 @@
     }
 
     function onPlayerReady(event) {
-      // Player ready
+      // Ready
     }
 
     function hideAndSearch() {
@@ -174,12 +165,12 @@
         player.mute();
         document.getElementById('unmuteBtn').style.display = 'inline-block';
 
-        // Set lowest quality (144p) after 1 sec
+        // Set low quality
         setTimeout(() => {
           try {
             player.setPlaybackQuality('tiny');
           } catch (err) {
-            console.warn("Could not set video quality:", err);
+            console.warn("Quality not set:", err);
           }
         }, 1000);
       }
