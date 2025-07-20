@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>YouTube Music Player</title>
+  <style>
+    #player {
+      width: 100%;
+      height: 360px;
+      transition: margin-left 0.5s ease;
+      margin-left: -9999px;
+    }
+
+    #searchBar {
+      margin-top: 20px;
+    }
+
+    #unmuteBtn {
+      margin-top: 10px;
+      display: block;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>YouTube Music Player 🎵</h2>
+
+  <div id="searchBar">
+    <input type="text" id="searchInput" placeholder="Search any song...">
+    <button onclick="hideAndSearch()">Search & Play</button>
+  </div>
+
+  <div id="player"></div>
+
+  <button id="unmuteBtn" onclick="unmutePlayer()">🔊 Unmute</button>
+
+  <script>
+    let player;
+    let isFirstClick = true;
+    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y"; // Your YouTube Data API key
+
+    // Load YouTube IFrame API
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+
+    // Create YouTube Player
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '360',
+        width: '640',
+        videoId: '',
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          modestbranding: 1
+        },
+        events: {
+          onReady: onPlayerReady
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      // Nothing to do on load
+    }
+
+    function hideAndSearch() {
+      const playerDiv = document.getElementById("player");
+      searchSong(); // Trigger YouTube search
+    }
+
+    function searchSong() {
+      const query = document.getElementById('searchInput').value;
+      if (!query.trim()) return;
+
+      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.items && data.items.length > 0) {
+            const videoId = data.items[0].id.videoId;
+
+            // Step 2: Verify embeddability
+            fetch(`https://www.googleapis.com/youtube/v3/videos?part=status&id=${videoId}&key=${apiKey}`)
+              .then(res => res.json())
+              .then(videoData => {
+                const isEmbeddable = videoData.items?.[0]?.status?.embeddable;
+                if (isEmbeddable) {
+                  playVideo(videoId);
+                } else {
+                  alert("This video cannot be played here. Try another.");
+                }
+              });
+          } else {
+            alert("No results found!");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error searching YouTube.");
+        });
+    }
+
+    function playVideo(videoId) {
+      if (player && videoId) {
+        if (isFirstClick) {
+          isFirstClick = false;
+        }
+        player.loadVideoById(videoId);
+        player.mute(); // Start muted
+        document.getElementById('unmuteBtn').style.display = 'inline-block';
+
+        // Try to set quality to 144p (tiny) after 1 second
+        setTimeout(() => {
+          try {
+            player.setPlaybackQuality('tiny');
+          } catch (err) {
+            console.warn("Could not set video quality:", err);
+          }
+        }, 1000);
+      }
+    }
+
+    function unmutePlayer() {
+      if (player) {
+        player.unMute();
+      }
+    }
+  </script>
+
+</body>
+</html>
