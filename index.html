@@ -3,30 +3,79 @@
 <head>
   <title>YouTube Music Player</title>
   <style>
-    #player {
-      width: 100%;
-      height: 360px;
-      transition: margin-left 0.5s ease;
-      margin-left: -9999px;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    h2 {
+      margin-top: 30px;
     }
 
     #searchBar {
       margin-top: 20px;
     }
 
-    #unmuteBtn {
+    #searchInput {
+      padding: 10px;
+      width: 250px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #searchBar button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      border: none;
+      background-color: #28a745;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #playerContainer {
+      margin-top: 30px;
+    }
+
+    #player {
+      width: 90%;
+      max-width: 640px;
+      height: 360px;
+      margin: 0 auto;
       margin-top: 10px;
       display: block;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 10px 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    #songTitle {
+      font-size: 18px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    #unmuteBtn {
+      margin-top: 20px;
+      display: inline-block;
+      padding: 10px 20px;
       background: #007bff;
       color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      z-index: 9999;
+    }
+
+    #volumeControl {
+      margin-top: 15px;
+    }
+
+    input[type="range"] {
+      width: 200px;
     }
   </style>
 </head>
@@ -36,24 +85,30 @@
 
   <div id="searchBar">
     <input type="text" id="searchInput" placeholder="Search any song...">
-    <button onclick="hideAndSearch()">Search & Play</button>
+    <button onclick="hideAndSearch()">Search</button>
   </div>
 
-  <div id="player"></div>
+  <div id="playerContainer">
+    <div id="songTitle">No song playing</div>
+    <div id="player"></div>
 
-  <button id="unmuteBtn" onclick="unmutePlayer()">🔊 Unmute</button>
+    <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+
+    <div id="volumeControl">
+      <label for="volumeSlider">🔊 Volume: </label>
+      <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
+    </div>
+  </div>
 
   <script>
     let player;
     let isFirstClick = true;
-    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y"; // Your YouTube Data API key
+    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y";
 
-    // Load YouTube IFrame API
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
-    // Create YouTube Player
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
         height: '360',
@@ -71,12 +126,11 @@
     }
 
     function onPlayerReady(event) {
-      // Nothing to do on load
+      // Player ready
     }
 
     function hideAndSearch() {
-      const playerDiv = document.getElementById("player");
-      searchSong(); // Trigger YouTube search
+      searchSong();
     }
 
     function searchSong() {
@@ -88,8 +142,9 @@
         .then(data => {
           if (data.items && data.items.length > 0) {
             const videoId = data.items[0].id.videoId;
+            const title = data.items[0].snippet.title;
+            document.getElementById("songTitle").innerText = title;
 
-            // Step 2: Verify embeddability
             fetch(`https://www.googleapis.com/youtube/v3/videos?part=status&id=${videoId}&key=${apiKey}`)
               .then(res => res.json())
               .then(videoData => {
@@ -116,10 +171,10 @@
           isFirstClick = false;
         }
         player.loadVideoById(videoId);
-        player.mute(); // Start muted
+        player.mute();
         document.getElementById('unmuteBtn').style.display = 'inline-block';
 
-        // Try to set quality to 144p (tiny) after 1 second
+        // Set lowest quality (144p) after 1 sec
         setTimeout(() => {
           try {
             player.setPlaybackQuality('tiny');
@@ -133,6 +188,12 @@
     function unmutePlayer() {
       if (player) {
         player.unMute();
+      }
+    }
+
+    function setVolume(value) {
+      if (player && typeof player.setVolume === "function") {
+        player.setVolume(value);
       }
     }
   </script>
