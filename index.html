@@ -1,132 +1,101 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
-  <title>Foxxy Music</title>
+  <title>Foxxy Sync Music</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: white;
+      font-family: sans-serif;
       text-align: center;
-      background: #f0f0f0;
+      padding: 20px;
       margin: 0;
-      padding: 0;
-      overflow-x: hidden; /* Prevent horizontal scroll */
+      overflow-x: hidden;
     }
-
-    h1 {
-      margin-top: 30px;
-      font-size: 2.2rem;
-    }
-
-    #searchBar {
-      margin: 20px 0;
-    }
-
-    #searchInput {
+    input[type="text"] {
       padding: 10px;
-      width: 250px;
-      font-size: 16px;
+      width: 60%;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 10px;
     }
-
-    #searchButton {
+    button {
       padding: 10px 20px;
       font-size: 16px;
-      background: #28a745;
-      color: white;
       border: none;
       border-radius: 6px;
+      background-color:green;
+      color: black;
       cursor: pointer;
+      margin: 5px;
     }
-
-    #thumbnail {
-      width: 320px;
-      height: auto;
-      border-radius: 10px;
-      margin-top: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    #videoTitle {
+      font-size: 20px;
+      margin-top: 10px;
     }
-
-    #songTitle {
-      margin-top: 15px;
-      font-weight: bold;
-      font-size: 18px;
-      max-width: 90%;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    #player {
-      position: absolute;
-      left: -9999px;
-      width: 0;
-      height: 0;
-      overflow: hidden;
-    }
-
     #controlsWrapper {
-      margin-top: 30px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
+      margin-top: 15px;
     }
-
-    #unmuteBtn {
-      padding: 15px 25px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 18px;
-      cursor: pointer;
+    #volumeControl {
+      margin-top: 10px;
     }
-
-    #volumeControl label {
-      font-weight: bold;
-    }
-
-    input[type=range] {
-      width: 200px;
-    }
-
-    #trackTime {
+    #trackProgress {
+      margin-top: 8px;
+      font-family: monospace;
       font-size: 16px;
-      font-weight: bold;
-      color: #444;
+    }
+    #thumbnail {
+      margin-top: 10px;
+      max-width: 300px;
+      border-radius: 12px;
     }
   </style>
 </head>
 <body>
-
-  <h1>Foxxy Music 🎵</h1>
-
-  <div id="searchBar">
-    <input type="text" id="searchInput" placeholder="Search any song...">
-    <button id="searchButton" onclick="hideAndSearch()">Search</button>
-  </div>
-
-  <img id="thumbnail" src="" style="display:none;">
-  <div id="songTitle"></div>
-  <div id="trackTime">00:00 / 00:00</div>
-
-  <div id="player"></div>
-
-  <div id="controlsWrapper">
-    <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+  <h1>Foxxy Sync Music 🎵</h1>  <input type="text" id="searchInput" placeholder="Search a song">
+  <button onclick="searchSong()">Search</button>  <div id="videoTitle"></div>
+  <img id="thumbnail" src="" alt="" style="display:none">  <div id="controlsWrapper">
+    <div>
+      <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+      <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
+    </div>
     <div id="volumeControl">
       <label for="volumeSlider">🔉 Volume</label><br>
       <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
     </div>
-  </div>
-
-  <script>
+    <div id="trackProgress">00:00 / 00:00</div>
+  </div>  <div id="player" style="position:absolute; left:-9999px;"></div>  <script>
     let player;
-    let isFirstClick = true;
     let duration = 0;
-    const apiKey = "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y"; // Replace with your API key
+    let interval;
+    const apiKeys = [
+      "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
+      "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y",
+      "AIzaSyD8TitWTpspygPuDnbilqeaLj9AG1krL48"
+    ];
+    let currentKeyIndex = 0;
 
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
+    function getApiKey() {
+      const key = apiKeys[currentKeyIndex];
+      currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+      return key;
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTrackProgress() {
+      if (player && typeof player.getCurrentTime === 'function') {
+        const current = player.getCurrentTime();
+        document.getElementById('trackProgress').innerText = `${formatTime(current)} / ${formatTime(duration)}`;
+      }
+    }
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
@@ -136,7 +105,8 @@
         playerVars: {
           autoplay: 0,
           controls: 1,
-          modestbranding: 1
+          modestbranding: 1,
+          rel: 0
         },
         events: {
           onReady: onPlayerReady
@@ -144,95 +114,68 @@
       });
     }
 
-    function onPlayerReady(event) {
-      player.setVolume(50);
-      updateTime();
-    }
-
-    function hideAndSearch() {
-      searchSong();
-    }
-
-    function searchSong() {
-      const query = document.getElementById('searchInput').value;
-      if (!query.trim()) return;
-
-      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.items && data.items.length > 0) {
-            const video = data.items[0];
-            const videoId = video.id.videoId;
-            const title = video.snippet.title;
-            const thumb = video.snippet.thumbnails.medium.url;
-
-            document.getElementById('songTitle').innerText = title;
-            const thumbImg = document.getElementById('thumbnail');
-            thumbImg.src = thumb;
-            thumbImg.style.display = "block";
-
-            fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,status&id=${videoId}&key=${apiKey}`)
-              .then(res => res.json())
-              .then(videoData => {
-                const isEmbeddable = videoData.items?.[0]?.status?.embeddable;
-                if (isEmbeddable) {
-                  playVideo(videoId);
-                } else {
-                  alert("This video cannot be played here. Try another.");
-                }
-              });
-          } else {
-            alert("No results found!");
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          alert("Error searching YouTube.");
-        });
-    }
-
-    function playVideo(videoId) {
-      if (player && videoId) {
-        if (isFirstClick) {
-          isFirstClick = false;
-        }
-        player.loadVideoById(videoId);
-        player.mute();
-
-        setTimeout(() => {
-          duration = player.getDuration();
-        }, 1500);
-      }
+    function onPlayerReady() {
+      interval = setInterval(updateTrackProgress, 1000);
     }
 
     function unmutePlayer() {
-      if (player) {
+      if (player && typeof player.playVideo === 'function') {
         player.unMute();
+        player.playVideo();
+      }
+    }
+
+    function pausePlayer() {
+      if (player && typeof player.pauseVideo === 'function') {
+        player.pauseVideo();
       }
     }
 
     function setVolume(val) {
-      if (player) {
+      if (player && typeof player.setVolume === 'function') {
         player.setVolume(val);
       }
     }
 
-    function formatTime(sec) {
-      const m = Math.floor(sec / 60).toString().padStart(2, '0');
-      const s = Math.floor(sec % 60).toString().padStart(2, '0');
-      return `${m}:${s}`;
+    function searchSong() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) return;
+
+      const apiKey = getApiKey();
+      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.items || !data.items.length) {
+            alert("No results found");
+            return;
+          }
+
+          const video = data.items[0];
+          const videoId = video.id.videoId;
+          const title = video.snippet.title;
+          const thumb = video.snippet.thumbnails.medium.url;
+
+          player.loadVideoById(videoId);
+          player.mute();
+
+          document.getElementById('videoTitle').innerText = title;
+          document.getElementById('thumbnail').src = thumb;
+          document.getElementById('thumbnail').style.display = 'block';
+
+          // Wait a few seconds to get duration
+          setTimeout(() => {
+            duration = player.getDuration();
+            updateTrackProgress();
+          }, 2000);
+        })
+        .catch(err => {
+          alert("Error loading video: " + err.message);
+        });
     }
 
-    function updateTime() {
-      setInterval(() => {
-        if (player && player.getCurrentTime) {
-          const current = player.getCurrentTime();
-          const total = duration || player.getDuration();
-          document.getElementById('trackTime').innerText = `${formatTime(current)} / ${formatTime(total)}`;
-        }
-      }, 1000);
-    }
-  </script>
-
-</body>
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  </script></body>
 </html>
