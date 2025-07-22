@@ -1,6 +1,7 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html>
 <head>
-  <title>Foxxy Sync Music</title>
+  <title>Foxxy Music</title>
   <style>
     body {
       background-color: #111;
@@ -51,13 +52,19 @@
       margin-top: 10px;
       max-width: 300px;
       border-radius: 12px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
-  <h1>Foxxy Sync Music 🎵</h1>  <input type="text" id="searchInput" placeholder="Search a song">
-  <button onclick="searchSong()">Search</button>  <div id="videoTitle"></div>
-  <img id="thumbnail" src="" alt="" style="display:none">  <div id="controlsWrapper">
+  <h1>Foxxy Music 🎵</h1>
+  <input type="text" id="searchInput" placeholder="Search a song">
+  <button onclick="searchSong()">Search</button>
+  <div id="videoTitle"></div>
+  <img id="thumbnail" src="" alt="" style="display:none">
+  <div id="controlsWrapper">
     <div>
       <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
       <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
@@ -67,7 +74,11 @@
       <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
     </div>
     <div id="trackProgress">00:00 / 00:00</div>
-  </div>  <div id="player" style="position:absolute; left:-9999px;"></div>  <script>
+  </div>
+
+  <div id="player" style="position:absolute; left:-9999px;"></div>
+
+  <script>
     let player;
     let duration = 0;
     let interval;
@@ -138,7 +149,6 @@
     }
 
     function searchSong() {
-      unmutePlayer()
       const query = document.getElementById('searchInput').value.trim();
       if (!query) return;
 
@@ -149,7 +159,6 @@
           if (!data.items || !data.items.length) {
             alert("No results found");
             return;
-            unmutePlayer()
           }
 
           const video = data.items[0];
@@ -158,17 +167,18 @@
           const thumb = video.snippet.thumbnails.medium.url;
 
           player.loadVideoById(videoId);
-          player.mute();
 
           document.getElementById('videoTitle').innerText = title;
           document.getElementById('thumbnail').src = thumb;
           document.getElementById('thumbnail').style.display = 'block';
 
-          // Wait a few seconds to get duration
+          // Wait a bit, then unmute and play
           setTimeout(() => {
+            player.unMute();
+            player.playVideo();
             duration = player.getDuration();
             updateTrackProgress();
-          }, 2000);
+          }, 1500);
         })
         .catch(err => {
           alert("Error loading video: " + err.message);
@@ -179,5 +189,6 @@
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-  </script></body>
+  </script>
+</body>
 </html>
