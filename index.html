@@ -25,7 +25,7 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
-      background-color:green;
+      background-color: green;
       color: black;
       cursor: pointer;
       margin: 5px;
@@ -89,6 +89,7 @@
     ];
     let currentKeyIndex = 0;
     let lastPlayed = "";
+    const sheetURL = "https://script.google.com/macros/s/AKfycbzEhvARdMVq6W7srYh2L4aSSsc5DKyDsKAcVIUJ7D9prEUCM5nl8ibFXuDpHgNRBZvG/exec";
 
     function getApiKey() {
       const key = apiKeys[currentKeyIndex];
@@ -128,8 +129,8 @@
 
     function onPlayerReady() {
       interval = setInterval(updateTrackProgress, 1000);
-      fetchFromSheet(); // Fetch when player is ready
-      setInterval(fetchFromSheet, 2000); // Poll every 2 seconds
+      fetchFromSheet(); // Fetch when ready
+      setInterval(fetchFromSheet, 2000); // Poll every 2 sec
     }
 
     function unmutePlayer() {
@@ -151,6 +152,19 @@
       }
     }
 
+    function searchAndStoreSong(songTitle) {
+      fetch(sheetURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `title=${encodeURIComponent(songTitle)}`,
+      })
+      .then(res => res.text())
+      .then(text => console.log("Stored:", text))
+      .catch(err => console.error("POST failed:", err));
+    }
+
     function searchSong(queryFromParam = null) {
       const query = queryFromParam || document.getElementById('searchInput').value.trim();
       if (!query) return;
@@ -170,7 +184,6 @@
           const thumb = video.snippet.thumbnails.medium.url;
 
           player.loadVideoById(videoId);
-
           document.getElementById('videoTitle').innerText = title;
           document.getElementById('thumbnail').src = thumb;
           document.getElementById('thumbnail').style.display = 'block';
@@ -181,6 +194,12 @@
             duration = player.getDuration();
             updateTrackProgress();
           }, 1500);
+
+          // Store song to sheet if user manually searched
+          if (!queryFromParam) {
+            searchAndStoreSong(query);
+            lastPlayed = query; // prevent immediate re-trigger
+          }
         })
         .catch(err => {
           alert("Error loading video: " + err.message);
@@ -188,7 +207,7 @@
     }
 
     function fetchFromSheet() {
-      fetch("https://script.google.com/macros/s/AKfycbwfD1hg59IOTGTm_i_6odjsYu3Ak7Ku-JY3EPVbFpRlWQSweIXm9_my8zKtxxOC7Pw9/exec")
+      fetch(sheetURL)
         .then(res => res.text())
         .then(songTitle => {
           songTitle = songTitle.trim();
@@ -198,7 +217,7 @@
             searchSong(songTitle); // Trigger search and play
           }
         })
-        .catch(err => console.error("Failed to fetch from sheet:", err));
+        .catch(err => console.error("Fetch failed:", err));
     }
 
     const tag = document.createElement('script');
