@@ -25,7 +25,7 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
-      background-color:green;
+      background-color: green;
       color: black;
       cursor: pointer;
       margin: 5px;
@@ -82,10 +82,6 @@
     let player;
     let duration = 0;
     let interval;
-    let lastPlayed = "";
-
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwXZdm08wV2DTEw7VUl-QNTCkaFIEy8IPxPn0jqxB1m-xwMvJtHMmpjbld_vqtFsZvc/exec"; // 👈 Replace this with your deployed Apps Script URL
-
     const apiKeys = [
       "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
       "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y",
@@ -131,7 +127,6 @@
 
     function onPlayerReady() {
       interval = setInterval(updateTrackProgress, 1000);
-      setInterval(checkForUpdates, 3000); // every 3 sec fetch new song
     }
 
     function unmutePlayer() {
@@ -153,6 +148,41 @@
       }
     }
 
+    // SYNC SETUP
+    const SYNC_URL = "https://script.google.com/macros/s/AKfycbw5W-b1DtSr7b6FI039NTJtjwXKd3npKI2mhu3GqMVoHKK6G1SB6dhLrjfIjpRmhAAA/exec";
+    let lastVideoId = null;
+
+    function postToSheet(videoId) {
+      fetch(SYNC_URL, {
+        method: 'POST',
+        body: JSON.stringify({ videoId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    function fetchFromSheet() {
+      fetch(SYNC_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data.videoId && data.videoId !== lastVideoId) {
+            lastVideoId = data.videoId;
+            loadVideoById(data.videoId);
+          }
+        });
+    }
+
+    function loadVideoById(videoId) {
+      if (player && typeof player.loadVideoById === 'function') {
+        player.loadVideoById(videoId);
+        setTimeout(() => {
+          player.unMute();
+          player.playVideo();
+          duration = player.getDuration();
+          updateTrackProgress();
+        }, 1500);
+      }
+    }
+
     function searchSong() {
       const query = document.getElementById('searchInput').value.trim();
       if (!query) return;
@@ -171,53 +201,16 @@
           const title = video.snippet.title;
           const thumb = video.snippet.thumbnails.medium.url;
 
-          playVideo(videoId, title, thumb);
-          lastPlayed = title;
+          lastVideoId = videoId;
+          postToSheet(videoId); // SYNC
+          loadVideoById(videoId); // Play locally
 
-          fetch(scriptURL, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: "name=" + encodeURIComponent(title)
-          });
+          document.getElementById('videoTitle').innerText = title;
+          document.getElementById('thumbnail').src = thumb;
+          document.getElementById('thumbnail').style.display = 'block';
         })
         .catch(err => {
           alert("Error loading video: " + err.message);
-        });
-    }
-
-    function playVideo(videoId, title, thumb) {
-      player.loadVideoById(videoId);
-      document.getElementById('videoTitle').innerText = title;
-      document.getElementById('thumbnail').src = thumb;
-      document.getElementById('thumbnail').style.display = 'block';
-      setTimeout(() => {
-        player.unMute();
-        player.playVideo();
-        duration = player.getDuration();
-        updateTrackProgress();
-      }, 1500);
-    }
-
-    function checkForUpdates() {
-      fetch(scriptURL)
-        .then(res => res.json())
-        .then(data => {
-          const title = data.song;
-          if (title && title !== lastPlayed) {
-            const apiKey = getApiKey();
-            fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
-              .then(res => res.json())
-              .then(data => {
-                if (!data.items || !data.items.length) return;
-                const video = data.items[0];
-                const videoId = video.id.videoId;
-                const title = video.snippet.title;
-                const thumb = video.snippet.thumbnails.medium.url;
-
-                playVideo(videoId, title, thumb);
-                lastPlayed = title;
-              });
-          }
         });
     }
 
@@ -225,6 +218,9 @@
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    // Start polling every 2 seconds
+    setInterval(fetchFromSheet, 2000);
   </script>
 </body>
 </html>
