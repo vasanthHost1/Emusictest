@@ -10,6 +10,7 @@
       text-align: center;
       padding: 20px;
       margin: 0;
+      overflow-x: hidden;
     }
     input[type="text"] {
       padding: 10px;
@@ -24,7 +25,7 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
-      background-color: green;
+      background-color:green;
       color: black;
       cursor: pointer;
       margin: 5px;
@@ -65,8 +66,8 @@
   <img id="thumbnail" src="" alt="" style="display:none">
   <div id="controlsWrapper">
     <div>
-      <button onclick="playSong()">▶️ Play</button>
-      <button onclick="pausePlayer()">⏸ Pause</button>
+      <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+      <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
     </div>
     <div id="volumeControl">
       <label for="volumeSlider">🔉 Volume</label><br>
@@ -74,13 +75,15 @@
     </div>
     <div id="trackProgress">00:00 / 00:00</div>
   </div>
-
   <div id="player" style="position:absolute; left:-9999px;"></div>
 
   <script>
-    let player, interval;
+    let player;
     let duration = 0;
-    const apiUrl = 'https://script.google.com/macros/s/AKfycbxR8ZHfhdoYmSmEJMV-4TP9wl2EsfwugLWlwFo-gHfvuUH4IukJFgQbW0NMzXoSpTpA/exec';
+    let interval;
+    let lastPlayedSong = '';
+    let lastPlayedTime = 0;
+    let isSearcher = false;
 
     const apiKeys = [
       "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
@@ -120,18 +123,16 @@
           rel: 0
         },
         events: {
-          onReady: onPlayerReady
+          onReady: () => {
+            interval = setInterval(updateTrackProgress, 1000);
+            pollForUpdates();
+            setInterval(pollForUpdates, 3000); // every 3 seconds
+          }
         }
       });
     }
 
-    function onPlayerReady() {
-      interval = setInterval(updateTrackProgress, 1000);
-      fetchLatestSong();
-      setInterval(fetchLatestSong, 3000); // sync check every 3 sec
-    }
-
-    function playSong() {
+    function unmutePlayer() {
       if (player && typeof player.playVideo === 'function') {
         player.unMute();
         player.playVideo();
@@ -168,66 +169,73 @@
           const title = video.snippet.title;
           const thumb = video.snippet.thumbnails.medium.url;
 
-          player.loadVideoById(videoId);
-          document.getElementById('videoTitle').innerText = title;
-          document.getElementById('thumbnail').src = thumb;
-          document.getElementById('thumbnail').style.display = 'block';
+          // Save to Sheet
+          fetch("https://script.google.com/macros/s/AKfycbxR8ZHfhdoYmSmEJMV-4TP9wl2EsfwugLWlwFo-gHfvuUH4IukJFgQbW0NMzXoSpTpA/exec", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `name=${encodeURIComponent(query)}`
+          });
 
-          setTimeout(() => {
-            player.unMute();
-            player.playVideo();
-            duration = player.getDuration();
-            updateTrackProgress();
+          lastPlayedSong = query;
+          lastPlayedTime = Date.now();
+          isSearcher = true;
 
-            // send song name and timestamp to sheet
-            const time = Math.floor(player.getCurrentTime());
-            fetch(apiUrl, {
-              method: "POST",
-              body: new URLSearchParams({ name: query, time })
-            });
-
-          }, 1500);
+          loadAndPlay(videoId, title, thumb, 0);
         });
     }
 
-    function fetchLatestSong() {
-      fetch(apiUrl)
+    function loadAndPlay(videoId, title, thumb, startSeconds) {
+      player.loadVideoById({ videoId, startSeconds });
+      document.getElementById('videoTitle').innerText = title;
+      document.getElementById('thumbnail').src = thumb;
+      document.getElementById('thumbnail').style.display = 'block';
+
+      setTimeout(() => {
+        player.unMute();
+        player.playVideo();
+        duration = player.getDuration();
+        updateTrackProgress();
+      }, 1000);
+    }
+
+    function pollForUpdates() {
+      fetch("https://script.google.com/macros/s/AKfycbzsMDADzxZ-zCI1jDYTFAScz7X9PEcfo-_9eKOnygQvOM_dF-5HJgzdJKTwf4o0c49l/exec")
         .then(res => res.json())
-        .then(data => {
-          const query = data.name;
-          const seekTo = parseInt(data.time || 0);
+        .then(async data => {
+          const query = data.song;
+          const startTime = parseInt(data.time || "0");
 
-          if (!query || query === lastQuery) return;
+          if (query && (query !== lastPlayedSong || Math.abs(startTime - lastPlayedTime) > 1000)) {
+            if (isSearcher) {
+              isSearcher = false;
+              return; // prevent double playback
+            }
 
-          lastQuery = query;
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const apiKey = getApiKey();
 
-          const apiKey = getApiKey();
-          fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
-            .then(res => res.json())
-            .then(data => {
-              if (!data.items || !data.items.length) return;
+            const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`);
+            const data2 = await res.json();
 
-              const video = data.items[0];
+            if (data2.items.length) {
+              const video = data2.items[0];
               const videoId = video.id.videoId;
               const title = video.snippet.title;
               const thumb = video.snippet.thumbnails.medium.url;
 
-              player.loadVideoById(videoId, seekTo);
-              document.getElementById('videoTitle').innerText = title;
-              document.getElementById('thumbnail').src = thumb;
-              document.getElementById('thumbnail').style.display = 'block';
-              setTimeout(() => {
-                player.unMute();
-                player.playVideo();
-              }, 1500);
-            });
+              lastPlayedSong = query;
+              lastPlayedTime = startTime;
+
+              loadAndPlay(videoId, title, thumb, elapsed);
+            }
+          }
         });
     }
 
-    let lastQuery = "";
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
   </script>
 </body>
 </html>
