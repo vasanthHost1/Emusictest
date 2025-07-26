@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Foxxy Music 🎶</title>
+  <title>Foxxy Music</title>
   <style>
     body {
       background-color: #111;
@@ -9,6 +9,8 @@
       font-family: sans-serif;
       text-align: center;
       padding: 20px;
+      margin: 0;
+      overflow-x: hidden;
     }
     input[type="text"] {
       padding: 10px;
@@ -23,119 +25,186 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
-      background-color: green;
+      background-color:green;
       color: black;
       cursor: pointer;
       margin: 5px;
+    }
+    #videoTitle {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    #controlsWrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 15px;
+    }
+    #volumeControl {
+      margin-top: 10px;
+    }
+    #trackProgress {
+      margin-top: 8px;
+      font-family: monospace;
+      font-size: 16px;
     }
     #thumbnail {
       margin-top: 10px;
       max-width: 300px;
       border-radius: 12px;
-      display: none;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
   <h1>Foxxy Music 🎵</h1>
-  <input type="text" id="searchInput" placeholder="Enter song title (e.g., Perfect Ed Sheeran)">
+  <input type="text" id="searchInput" placeholder="Search a song">
   <button onclick="searchSong()">Search</button>
-  <br>
   <div id="videoTitle"></div>
-  <img id="thumbnail" src="" id="thumbnail">
-  <br>
-  <button onclick="playVideo()">▶️ Play</button>
-  <button onclick="pauseVideo()">⏸ Pause</button>
-  <br><br>
+  <img id="thumbnail" src="" alt="" style="display:none">
+  <div id="controlsWrapper">
+    <div>
+      <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
+      <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
+    </div>
+    <div id="volumeControl">
+      <label for="volumeSlider">🔉 Volume</label><br>
+      <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
+    </div>
+    <div id="trackProgress">00:00 / 00:00</div>
+  </div>
 
   <div id="player" style="position:absolute; left:-9999px;"></div>
 
   <script>
-    let player, currentTitle = "";
-    const API_KEYS = [
+    let player;
+    let duration = 0;
+    let interval;
+    const apiKeys = [
       "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
       "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y",
       "AIzaSyD8TitWTpspygPuDnbilqeaLj9AG1krL48"
     ];
-    let keyIndex = 0;
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzEhvARdMVq6W7srYh2L4aSSsc5DKyDsKAcVIUJ7D9prEUCM5nl8ibFXuDpHgNRBZvG/exec";
+    let currentKeyIndex = 0;
+    let lastPlayed = "";
 
     function getApiKey() {
-      const key = API_KEYS[keyIndex];
-      keyIndex = (keyIndex + 1) % API_KEYS.length;
+      const key = apiKeys[currentKeyIndex];
+      currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
       return key;
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTrackProgress() {
+      if (player && typeof player.getCurrentTime === 'function') {
+        const current = player.getCurrentTime();
+        document.getElementById('trackProgress').innerText = `${formatTime(current)} / ${formatTime(duration)}`;
+      }
     }
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
-        height: '0',
-        width: '0',
+        height: '360',
+        width: '640',
         videoId: '',
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          modestbranding: 1,
+          rel: 0
+        },
         events: {
-          'onReady': () => console.log('YT Ready')
+          onReady: onPlayerReady
         }
       });
     }
 
-    function playVideo() {
-      if (player) player.playVideo();
+    function onPlayerReady() {
+      interval = setInterval(updateTrackProgress, 1000);
+      fetchFromSheet(); // Fetch when player is ready
+      setInterval(fetchFromSheet, 2000); // Poll every 2 seconds
     }
 
-    function pauseVideo() {
-      if (player) player.pauseVideo();
+    function unmutePlayer() {
+      if (player && typeof player.playVideo === 'function') {
+        player.unMute();
+        player.playVideo();
+      }
     }
 
-    function searchSong() {
-      const title = document.getElementById('searchInput').value.trim();
-      if (!title) return;
-
-      fetch(SHEET_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `title=${encodeURIComponent(title)}`
-      });
-
-      loadAndPlay(title);
+    function pausePlayer() {
+      if (player && typeof player.pauseVideo === 'function') {
+        player.pauseVideo();
+      }
     }
 
-    function loadAndPlay(title) {
+    function setVolume(val) {
+      if (player && typeof player.setVolume === 'function') {
+        player.setVolume(val);
+      }
+    }
+
+    function searchSong(queryFromParam = null) {
+      const query = queryFromParam || document.getElementById('searchInput').value.trim();
+      if (!query) return;
+
       const apiKey = getApiKey();
-      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title)}&key=${apiKey}&type=video&maxResults=1`)
+      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
         .then(res => res.json())
         .then(data => {
+          if (!data.items || !data.items.length) {
+            alert("No results found");
+            return;
+          }
+
           const video = data.items[0];
           const videoId = video.id.videoId;
-          const videoTitle = video.snippet.title;
+          const title = video.snippet.title;
           const thumb = video.snippet.thumbnails.medium.url;
 
-          document.getElementById('videoTitle').innerText = videoTitle;
+          player.loadVideoById(videoId);
+
+          document.getElementById('videoTitle').innerText = title;
           document.getElementById('thumbnail').src = thumb;
           document.getElementById('thumbnail').style.display = 'block';
 
-          player.loadVideoById(videoId);
+          setTimeout(() => {
+            player.unMute();
+            player.playVideo();
+            duration = player.getDuration();
+            updateTrackProgress();
+          }, 1500);
+        })
+        .catch(err => {
+          alert("Error loading video: " + err.message);
         });
     }
 
-    function syncLoop() {
-      setInterval(() => {
-        fetch(SHEET_URL)
-          .then(res => res.text())
-          .then(title => {
-            if (title && title !== currentTitle) {
-              currentTitle = title;
-              loadAndPlay(title);
-            }
-          });
-      }, 2000);
+    function fetchFromSheet() {
+      fetch("https://script.google.com/macros/s/AKfycbzEhvARdMVq6W7srYh2L4aSSsc5DKyDsKAcVIUJ7D9prEUCM5nl8ibFXuDpHgNRBZvG/exec")
+        .then(res => res.text())
+        .then(songTitle => {
+          songTitle = songTitle.trim();
+          if (songTitle && songTitle !== lastPlayed) {
+            lastPlayed = songTitle;
+            document.getElementById('searchInput').value = songTitle;
+            searchSong(songTitle); // Trigger search and play
+          }
+        })
+        .catch(err => console.error("Failed to fetch from sheet:", err));
     }
 
-    // Load YT Player
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
-
-    // Start sync
-    syncLoop();
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
   </script>
 </body>
 </html>
