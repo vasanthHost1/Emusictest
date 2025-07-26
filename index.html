@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Foxxy Music</title>
+  <title>Foxxy Sync Music</title>
   <style>
     body {
       background-color: #111;
@@ -59,7 +59,7 @@
   </style>
 </head>
 <body>
-  <h1>Foxxy Music 🎵</h1>
+  <h1>Foxxy Sync Music 🎵</h1>
   <input type="text" id="searchInput" placeholder="Search a song">
   <button onclick="searchSong()">Search</button>
   <div id="videoTitle"></div>
@@ -165,18 +165,18 @@
       .catch(err => console.error("POST failed:", err));
     }
 
-    function searchSong(queryFromParam = null) {
+    // ✅ Replaced function starts here
+    function searchSong(queryFromParam = null, retry = 0) {
       const query = queryFromParam || document.getElementById('searchInput').value.trim();
       if (!query) return;
 
-      const apiKey = getApiKey();
+      const apiKey = apiKeys[retry];
+      if (!apiKey) return alert("❌ All API keys failed or quota exhausted.");
+
       fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
         .then(res => res.json())
         .then(data => {
-          if (!data.items || !data.items.length) {
-            alert("No results found");
-            return;
-          }
+          if (!data.items || !data.items.length) throw new Error("No results");
 
           const video = data.items[0];
           const videoId = video.id.videoId;
@@ -195,16 +195,17 @@
             updateTrackProgress();
           }, 1500);
 
-          // Store song to sheet if user manually searched
           if (!queryFromParam) {
             searchAndStoreSong(query);
-            lastPlayed = query; // prevent immediate re-trigger
+            lastPlayed = query;
           }
         })
         .catch(err => {
-          alert("Error loading video: " + err.message);
+          console.warn(`API key failed: ${apiKey}. Retrying...`);
+          searchSong(queryFromParam, retry + 1);
         });
     }
+    // ✅ Replaced function ends here
 
     function fetchFromSheet() {
       fetch(sheetURL)
