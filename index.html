@@ -10,7 +10,6 @@
       text-align: center;
       padding: 20px;
       margin: 0;
-      overflow-x: hidden;
     }
     input[type="text"] {
       padding: 10px;
@@ -25,7 +24,7 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
-      background-color:green;
+      background-color: green;
       color: black;
       cursor: pointer;
       margin: 5px;
@@ -66,8 +65,8 @@
   <img id="thumbnail" src="" alt="" style="display:none">
   <div id="controlsWrapper">
     <div>
-      <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
-      <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
+      <button onclick="playSong()">▶️ Play</button>
+      <button onclick="pausePlayer()">⏸ Pause</button>
     </div>
     <div id="volumeControl">
       <label for="volumeSlider">🔉 Volume</label><br>
@@ -79,9 +78,10 @@
   <div id="player" style="position:absolute; left:-9999px;"></div>
 
   <script>
-    let player;
+    let player, interval;
     let duration = 0;
-    let interval;
+    const apiUrl = 'https://script.google.com/macros/s/AKfycbxR8ZHfhdoYmSmEJMV-4TP9wl2EsfwugLWlwFo-gHfvuUH4IukJFgQbW0NMzXoSpTpA/exec';
+
     const apiKeys = [
       "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
       "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y",
@@ -127,9 +127,11 @@
 
     function onPlayerReady() {
       interval = setInterval(updateTrackProgress, 1000);
+      fetchLatestSong();
+      setInterval(fetchLatestSong, 3000); // sync check every 3 sec
     }
 
-    function unmutePlayer() {
+    function playSong() {
       if (player && typeof player.playVideo === 'function') {
         player.unMute();
         player.playVideo();
@@ -167,28 +169,65 @@
           const thumb = video.snippet.thumbnails.medium.url;
 
           player.loadVideoById(videoId);
-
           document.getElementById('videoTitle').innerText = title;
           document.getElementById('thumbnail').src = thumb;
           document.getElementById('thumbnail').style.display = 'block';
 
-          // Wait a bit, then unmute and play
           setTimeout(() => {
             player.unMute();
             player.playVideo();
             duration = player.getDuration();
             updateTrackProgress();
+
+            // send song name and timestamp to sheet
+            const time = Math.floor(player.getCurrentTime());
+            fetch(apiUrl, {
+              method: "POST",
+              body: new URLSearchParams({ name: query, time })
+            });
+
           }, 1500);
-        })
-        .catch(err => {
-          alert("Error loading video: " + err.message);
         });
     }
 
+    function fetchLatestSong() {
+      fetch(apiUrl)
+        .then(res => res.json())
+        .then(data => {
+          const query = data.name;
+          const seekTo = parseInt(data.time || 0);
+
+          if (!query || query === lastQuery) return;
+
+          lastQuery = query;
+
+          const apiKey = getApiKey();
+          fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
+            .then(res => res.json())
+            .then(data => {
+              if (!data.items || !data.items.length) return;
+
+              const video = data.items[0];
+              const videoId = video.id.videoId;
+              const title = video.snippet.title;
+              const thumb = video.snippet.thumbnails.medium.url;
+
+              player.loadVideoById(videoId, seekTo);
+              document.getElementById('videoTitle').innerText = title;
+              document.getElementById('thumbnail').src = thumb;
+              document.getElementById('thumbnail').style.display = 'block';
+              setTimeout(() => {
+                player.unMute();
+                player.playVideo();
+              }, 1500);
+            });
+        });
+    }
+
+    let lastQuery = "";
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    document.body.appendChild(tag);
   </script>
 </body>
 </html>
