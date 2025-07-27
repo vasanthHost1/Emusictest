@@ -171,7 +171,7 @@
       if (!query) return;
 
       const apiKey = apiKeys[retry];
-      if (!apiKey) return alert("❌ All API keys failed or quota exhausted.");
+      if (!apiKey) return alert("Foxxy's servers are resting 🎧 Come back in a few hours😴.");
 
       fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
         .then(res => res.json())
