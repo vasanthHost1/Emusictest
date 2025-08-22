@@ -4,6 +4,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Foxxy Sync Music</title>
   <style>
+
+    /* Sync notice */
+.notice {
+  background: #1b1b1b;
+  border: 1px solid #333;
+  color: #e5e5e5;
+  padding: 12px 16px;
+  border-radius: 8px;
+  max-width: 720px;
+  margin: 12px auto;
+  font-size: 14px;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.notice .icon { font-size: 18px; line-height: 1; margin-top: 1px; }
+.notice .text { flex: 1; }
+.notice .close {
+  margin-left: 8px;
+  background: transparent;
+  border: 0;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+.notice .close:hover { color: #fff; }
+
+    
     body {
       background-color: #111;
       color: white;
@@ -61,6 +91,14 @@
 </head>
 <body>
   <h1>Foxxy Sync Music 🎵</h1>
+
+  <div class="notice" id="syncNotice" role="alert" aria-live="polite">
+  <span class="icon">⚠️</span>
+  <span class="text">
+    <strong>Notice:</strong> When searching for a new song, the previous track may play for a few seconds before the new one starts. This is due to the sync process. The correct song will begin shortly after.
+  </span>
+  <button class="close" aria-label="Dismiss" onclick="document.getElementById('syncNotice').remove()">✕</button>
+  </div>
   <input type="text" id="searchInput" placeholder="Search a song">
   <button onclick="searchSong()">Search</button>
   <div id="videoTitle"></div>
