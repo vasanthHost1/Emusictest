@@ -205,7 +205,7 @@ function searchSong(query, save = false) {
     if (!query) return;
     
     const apiKey = getApiKey();
-    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoCategoryId=10&maxResults=1`)
+    fetch(`https://youtube.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoCategoryId=10&maxResults=1`)
     .then(res => res.json())
     .then(data => {
         if (!data.items || !data.items.length) return;
@@ -304,7 +304,8 @@ function updateProgress() {
     }
 }
 
-document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchSong(); });
+document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchSong(); }
+);
 document.getElementById('playlistInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') addPlaylistInputSong(); });
 
 updatePlaylistUI();
