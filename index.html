@@ -2,270 +2,652 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Foxxy Sync Music</title>
+  <title>Foxxy Music</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-
-    /* Sync notice */
-.notice {
-  background: #1b1b1b;
-  border: 1px solid #333;
-  color: #e5e5e5;
-  padding: 12px 16px;
-  border-radius: 8px;
-  max-width: 720px;
-  margin: 12px auto;
-  font-size: 14px;
-  line-height: 1.45;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.notice .icon { font-size: 18px; line-height: 1; margin-top: 1px; }
-.notice .text { flex: 1; }
-.notice .close {
-  margin-left: 8px;
-  background: transparent;
-  border: 0;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 0 4px;
-}
-.notice .close:hover { color: #fff; }
-
-    
-    body {
-      background-color: #111;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-      margin: 0;
-      overflow-x: hidden;
-    }
-    input[type="text"] {
-      padding: 10px;
-      width: 60%;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-      margin-bottom: 10px;
-    }
+    /* Buttons (global) */
     button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      background-color: green;
-      color: black;
-      cursor: pointer;
-      margin: 5px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
     }
-    #videoTitle {
-      font-size: 20px;
-      margin-top: 10px;
-    }
-    #controlsWrapper {
+
+    /* Page */
+    body {
+      background: #121212;
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 15px;
+      user-select: none;
+    }
+
+    /* Search bar */
+    .search-bar {
+      display: flex;
+      width: 90%;
+      max-width: 400px;
+      margin: 20px auto;
+      border-radius: 25px;
+      overflow: hidden;
+      background: #282828;
+    }
+    .search-bar input {
+      flex: 1;
+      border: none;
+      padding: 12px 15px;
+      outline: none;
+      background: transparent;
+      color: white;
+      font-size: 14px;
+    }
+    .search-bar button {
+      background: #1db954;
+      color: white;
+      border: none;
+      padding: 0 15px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* Album art */
+    .album-art {
+      position: relative;
+      width: 250px;
+      height: 250px;
+      border-radius: 10px;
+      margin-top: 20px;
+      background: #333 center/cover no-repeat;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    .default-icon {
+      fill: #1DB954;
+      width: 90px;
+      height: 90px;
+      opacity: 0.6;
+      margin-bottom: 10px;
+    }
+    .default-text {
+      color: #1DB954;
+      font-size: 1.8rem;
+      font-weight: 600;
+      opacity: 0.6;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Song title / artist */
+    .song-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-top: 20px;
+      text-align: center;
+      padding: 0 15px;
+    }
+    .song-artist {
+      font-size: 0.9em;
+      opacity: 0.8;
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    /* Controls */
+    .controls {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+    }
+    .controls button {
+      background: #1db954;
+      border: none;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls button:hover {
+      transform: scale(1.1);
+    }
+    .controls svg {
+      width: 28px;
+      height: 28px;
+      fill: white;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      margin-top: 25px;
+      width: 80%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .time {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.8em;
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
+    .progress-bar {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 5px;
+      background: rgba(255,255,255,0.3);
+      outline: none;
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #1db954;
+      cursor: pointer;
+      box-shadow: -400px 0 0 400px #1db954; /* visual fill trick */
+    }
+
+    /* Volume control */
+    .volume-container {
+      display: flex;
+      align-items: center;
+      position: relative;
     }
     #volumeControl {
-      margin-top: 10px;
+      width: 0;
+      opacity: 0;
+      transition: width 0.3s ease, opacity 0.3s ease;
+      margin-left: 5px;
+      cursor: pointer;
     }
-    #trackProgress {
-      margin-top: 8px;
-      font-family: monospace;
-      font-size: 16px;
+    .volume-container.show #volumeControl {
+      width: 100px;
+      opacity: 1;
     }
-    #thumbnail {
-      margin-top: 10px;
-      max-width: 300px;
+    #volumeBtn {
+      background: #1db954;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #volumeBtn svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+
+    /* Playlist Panel */
+    #playlistPanel {
+      display: none;               
+      position: fixed;
+      right: 20px;
+      bottom: 20px;                
+      width: 280px;                
+      background: #181818;
+      padding: 12px;
       border-radius: 12px;
-      display: block;
+      max-height: 55vh;            
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      z-index: 1000;
+      animation: panelIn .25s ease-out;  
+    }
+
+    @keyframes panelIn {
+      from { transform: translateY(12px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* Input + button inside playlist */
+    #playlistPanel input {
+      width: calc(100% - 20px);
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #282828;
+      color: white;
+      font-size: 14px;
+    }
+    #playlistPanel button {
+      background: #1db954;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* List */
+    #playlistPanel ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playlistPanel li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.05s ease;
+    }
+    #playlistPanel li:hover {
+      background: rgba(29,185,84,0.15);
+    }
+    #playlistPanel li:active {
+      transform: scale(0.995);
+    }
+    #playlistPanel li img {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+    #playlistPanel li span {
+      flex: 1;
+      font-size: 14px;
+      color: #eee;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Delete button */
+    .delete-btn {
       margin-left: auto;
-      margin-right: auto;
+      background: #e63946 !important;
+      color: white;
+      border: none;
+      padding: 2px 6px !important;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px !important;
+      margin-bottom: 0 !important;
+    }
+    .delete-btn:hover {
+      filter: brightness(1.1);
     }
   </style>
 </head>
 <body>
-  <h1>Foxxy Sync Music 🎵</h1>
 
-  <div class="notice" id="syncNotice" role="alert" aria-live="polite">
-  <span class="icon">⚠️</span>
-  <span class="text">
-    <strong>Notice:</strong> When searching for a new song, the previous track may play for a few seconds before the new one starts. This is due to the sync process. The correct song will begin shortly after.
-
-(This applies only if you searched for the song.)
-  </span>
-  <button class="close" aria-label="Dismiss" onclick="document.getElementById('syncNotice').remove()">✕</button>
-  </div>
-  <input type="text" id="searchInput" placeholder="Search a song">
-  <button onclick="searchSong()">Search</button>
-  <div id="videoTitle"></div>
-  <img id="thumbnail" src="" alt="" style="display:none">
-  <div id="controlsWrapper">
-    <div>
-      <button id="unmuteBtn" onclick="unmutePlayer()">▶️ Play</button>
-      <button id="pauseBtn" onclick="pausePlayer()">⏸ Pause</button>
-    </div>
-    <div id="volumeControl">
-      <label for="volumeSlider">🔉 Volume</label><br>
-      <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="setVolume(this.value)">
-    </div>
-    <div id="trackProgress">00:00 / 00:00</div>
+  <!-- Search -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search a song...">
+    <button onclick="searchSong()">Search</button>
+    <button onclick="togglePlaylistPanel()">Playlist</button>
   </div>
 
+  <!-- Album Art -->
+  <div class="album-art" id="thumbnail">
+    <svg class="default-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+    </svg>
+    <div class="default-text">Foxxy</div>
+  </div>
+
+  <!-- Song Info -->
+  <div class="song-title" id="videoTitle">Song Title</div>
+  <div class="song-artist" id="videoArtist">Artist</div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button id="playPauseBtn" onclick="togglePlay()">
+      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="pauseIcon" style="display:none;" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <div class="volume-container">
+      <button id="volumeBtn" onclick="toggleVolumeSlider()">
+        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
+      </button>
+      <input type="range" id="volumeControl" min="0" max="100" value="100">
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-container">
+    <div class="time">
+      <span id="currentTime">0:00</span>
+      <span id="totalTime">0:00</span>
+    </div>
+    <input type="range" id="progressBar" class="progress-bar" value="0" min="0" max="100">
+  </div>
+
+  <!-- Playlist Panel -->
+  <div id="playlistPanel">
+    <input type="text" id="playlistInput" placeholder="Add song to playlist...">
+    <button onclick="addPlaylistInputSong()">Add</button>
+    <ul id="playlist"></ul>
+  </div>
+
+  <!-- Hidden Player -->
   <div id="player" style="position:absolute; left:-9999px;"></div>
 
-  <script>
-    let player;
-    let duration = 0;
-    let interval;
-    const apiKeys = [
-      "AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k",
-      "AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y",
-      "AIzaSyD8TitWTpspygPuDnbilqeaLj9AG1krL48"
-    ];
-    let currentKeyIndex = 0;
-    let lastPlayed = "";
-    const sheetURL = "https://script.google.com/macros/s/AKfycbzEhvARdMVq6W7srYh2L4aSSsc5DKyDsKAcVIUJ7D9prEUCM5nl8ibFXuDpHgNRBZvG/exec";
+<script>
+let player, isPlaying = false, interval;
+const apiKeys = ["AIzaSyA6HuHCZSivAGvISxA4h3EglIQJgmee66k","AIzaSyCkUWUbVYjZDNRhNJBJ-NkN8ta3ga4vY3Y","AIzaSyD8TitWTpspygPuDnbilqeaLj9AG1krL48"];
+let currentKeyIndex = 0;
 
-    function getApiKey() {
-      const key = apiKeys[currentKeyIndex];
-      currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-      return key;
-    }
+let playlistSongs = JSON.parse(localStorage.getItem('playlistSongs') || '[]');
+let currentSongIndex = -1; // -1 means we are not currently playing from the playlist
+let currentVideoId = '';
+let isDraggingProgress = false; // Fixes progress bar jumping when seeking
 
-    function formatTime(sec) {
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
+function getApiKey() {
+    const key = apiKeys[currentKeyIndex];
+    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+    return key;
+}
 
-    function updateTrackProgress() {
-      if (player && typeof player.getCurrentTime === 'function') {
-        const current = player.getCurrentTime();
-        document.getElementById('trackProgress').innerText = `${formatTime(current)} / ${formatTime(duration)}`;
-      }
-    }
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '360',
-        width: '640',
+// ----------------- Player Initialization ----------------- //
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        height: '10', width: '10',
         videoId: '',
-        playerVars: {
-          autoplay: 0,
-          controls: 1,
-          modestbranding: 1,
-          rel: 0
-        },
+        playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0 },
         events: {
-          onReady: onPlayerReady
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange
         }
-      });
-    }
+    });
+}
 
-    function onPlayerReady() {
-      interval = setInterval(updateTrackProgress, 1000);
-      fetchFromSheet(); // Fetch when ready
-      setInterval(fetchFromSheet, 2000); // Poll every 2 sec
-    }
+function onPlayerReady() {
+    interval = setInterval(updateProgress, 1000);
+    player.setVolume(document.getElementById('volumeControl').value);
+}
 
-    function unmutePlayer() {
-      if (player && typeof player.playVideo === 'function') {
-        player.unMute();
+function onPlayerStateChange(e) {
+    if (e.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        document.getElementById('playIcon').style.display = "none";
+        document.getElementById('pauseIcon').style.display = "block";
+    } else if (e.data === YT.PlayerState.PAUSED) {
+        isPlaying = false;
+        document.getElementById('playIcon').style.display = "block";
+        document.getElementById('pauseIcon').style.display = "none";
+    } else if (e.data === YT.PlayerState.ENDED) {
+        playNextSong();
+    }
+}
+
+// ----------------- Core Playback Functions ----------------- //
+function playVideoData(id, title, thumb) {
+    currentVideoId = id;
+    if (player && typeof player.loadVideoById === 'function') {
+        player.loadVideoById(id);
+    }
+    
+    document.getElementById('videoTitle').innerText = title;
+    document.getElementById('videoArtist').innerText = "YouTube Audio";
+    document.getElementById('thumbnail').style.backgroundImage = `url(${thumb})`;
+    
+    // Hide default logo
+    document.querySelector('.default-icon').style.display = 'none';
+    document.querySelector('.default-text').style.display = 'none';
+    
+    isPlaying = true;
+    document.getElementById('playIcon').style.display = "none";
+    document.getElementById('pauseIcon').style.display = "block";
+}
+
+function togglePlay() {
+    if (!currentVideoId) return; // Prevent play if no song loaded
+    if (!isPlaying) {
         player.playVideo();
-      }
-    }
-
-    function pausePlayer() {
-      if (player && typeof player.pauseVideo === 'function') {
+    } else {
         player.pauseVideo();
-      }
     }
+}
 
-    function setVolume(val) {
-      if (player && typeof player.setVolume === 'function') {
-        player.setVolume(val);
-      }
+// ----------------- The "Next Similar Song" Engine ----------------- //
+function playNextSong() {
+    // If we are playing from the saved playlist and it's not the last song
+    if (currentSongIndex >= 0 && currentSongIndex < playlistSongs.length - 1) {
+        currentSongIndex++;
+        playSongAt(currentSongIndex);
+    } else {
+        // If playlist ended, OR we are playing a random searched song -> Autoplay similar
+        fetchAndPlaySimilarSong(currentVideoId);
     }
+}
 
-    function searchAndStoreSong(songTitle) {
-      fetch(sheetURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `title=${encodeURIComponent(songTitle)}`,
-      })
-      .then(res => res.text())
-      .then(text => console.log("Stored:", text))
-      .catch(err => console.error("POST failed:", err));
-    }
-
-    // ✅ Replaced function starts here
-    function searchSong(queryFromParam = null, retry = 0) {
-      const query = queryFromParam || document.getElementById('searchInput').value.trim();
-      if (!query) return;
-
-      const apiKey = apiKeys[retry];
-      if (!apiKey) return alert("Foxxy's servers are resting 🎧 Come back in a few hours😴.");
-
-      fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoEmbeddable=true&maxResults=1`)
+function fetchAndPlaySimilarSong(videoId) {
+    if (!videoId) return;
+    const apiKey = getApiKey();
+    
+    // 1. Fetch current video details to find out the channel name (usually the Artist)
+    fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`)
+    .then(res => res.json())
+    .then(data => {
+        if (!data.items || !data.items.length) return playRandomFallback();
+        
+        const snippet = data.items[0].snippet;
+        // Remove common YouTube music suffixes (like " - Topic" or "VEVO") to get a clean Artist Name
+        let artistName = snippet.channelTitle.replace(/ - Topic|VEVO/ig, '').trim();
+        
+        // 2. Search for related music by this artist
+        fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(artistName + " music")}&type=video&videoCategoryId=10&maxResults=10&key=${apiKey}`)
         .then(res => res.json())
-        .then(data => {
-          if (!data.items || !data.items.length) throw new Error("No results");
-
-          const video = data.items[0];
-          const videoId = video.id.videoId;
-          const title = video.snippet.title;
-          const thumb = video.snippet.thumbnails.medium.url;
-
-          player.loadVideoById(videoId);
-          document.getElementById('videoTitle').innerText = title;
-          document.getElementById('thumbnail').src = thumb;
-          document.getElementById('thumbnail').style.display = 'block';
-
-          setTimeout(() => {
-            player.unMute();
-            player.playVideo();
-            duration = player.getDuration();
-            updateTrackProgress();
-          }, 1500);
-
-          if (!queryFromParam) {
-            searchAndStoreSong(query);
-            lastPlayed = query;
-          }
+        .then(searchData => {
+            if (!searchData.items || !searchData.items.length) return playRandomFallback();
+            
+            // Exclude the currently playing video from the results
+            const similarVideos = searchData.items.filter(item => item.id.videoId !== videoId);
+            const results = similarVideos.length > 0 ? similarVideos : searchData.items;
+            
+            // Pick randomly from the top 5 related results to keep the radio feeling fresh
+            const nextVideo = results[Math.floor(Math.random() * Math.min(5, results.length))];
+            
+            // Detach from playlist since we are now infinitely auto-playing
+            currentSongIndex = -1; 
+            playVideoData(nextVideo.id.videoId, nextVideo.snippet.title, nextVideo.snippet.thumbnails.medium.url);
         })
-        .catch(err => {
-          console.warn(`API key failed: ${apiKey}. Retrying...`);
-          searchSong(queryFromParam, retry + 1);
-        });
-    }
-    // ✅ Replaced function ends here
+        .catch(() => playRandomFallback());
+    })
+    .catch(() => playRandomFallback());
+}
 
-    function fetchFromSheet() {
-      fetch(sheetURL)
-        .then(res => res.text())
-        .then(songTitle => {
-          songTitle = songTitle.trim();
-          if (songTitle && songTitle !== lastPlayed) {
-            lastPlayed = songTitle;
-            document.getElementById('searchInput').value = songTitle;
-            searchSong(songTitle); // Trigger search and play
-          }
-        })
-        .catch(err => console.error("Fetch failed:", err));
-    }
+function playRandomFallback() {
+    const apiKey = getApiKey();
+    const terms = ["trending pop hits", "lofi beats", "top 50 songs", "acoustic covers"];
+    const term = terms[Math.floor(Math.random() * terms.length)];
+    
+    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(term)}&type=video&videoCategoryId=10&maxResults=5&key=${apiKey}`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.items && data.items.length > 0) {
+            const nextVideo = data.items[Math.floor(Math.random() * data.items.length)];
+            currentSongIndex = -1;
+            playVideoData(nextVideo.id.videoId, nextVideo.snippet.title, nextVideo.snippet.thumbnails.medium.url);
+        }
+    });
+}
 
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-  </script>
+// ----------------- Searching & Playlist ----------------- //
+function searchSong(query, save = false) {
+    query = query || document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    
+    const apiKey = getApiKey();
+    // Added videoCategoryId=10 to strictly fetch Music category results
+    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoCategoryId=10&maxResults=1`)
+    .then(res => res.json())
+    .then(data => {
+        if (!data.items || !data.items.length) return;
+        const video = data.items[0];
+        
+        if (!save) {
+            // Standalone play (user searched a song directly)
+            currentSongIndex = -1; 
+            playVideoData(video.id.videoId, video.snippet.title, video.snippet.thumbnails.medium.url);
+        } else {
+            // Save to playlist
+            playlistSongs.push({
+                name: video.snippet.title,
+                thumb: video.snippet.thumbnails.default.url,
+                id: video.id.videoId
+            });
+            savePlaylist();
+            updatePlaylistUI();
+        }
+    });
+}
+
+function togglePlaylistPanel() {
+    const panel = document.getElementById('playlistPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function addPlaylistInputSong() {
+    const songName = document.getElementById('playlistInput').value.trim();
+    if (!songName) return;
+    searchSong(songName, true);
+    document.getElementById('playlistInput').value = '';
+}
+
+function savePlaylist() {
+    localStorage.setItem('playlistSongs', JSON.stringify(playlistSongs));
+}
+
+function updatePlaylistUI() {
+    const ul = document.getElementById('playlist');
+    ul.innerHTML = '';
+    playlistSongs.forEach((song, idx) => {
+        const li = document.createElement('li');
+        
+        const img = document.createElement('img');
+        img.src = song.thumb;
+        li.appendChild(img);
+        
+        const span = document.createElement('span');
+        span.textContent = song.name;
+        li.appendChild(span);
+        
+        // Play song when clicked
+        li.onclick = function(e) {
+            if (e.target.classList.contains('delete-btn')) return;
+            currentSongIndex = idx;
+            playVideoData(song.id, song.name, song.thumb);
+        };
+        
+        // Delete button
+        const del = document.createElement('button');
+        del.textContent = "X";
+        del.className = "delete-btn";
+        del.onclick = function(e) {
+            e.stopPropagation();
+            deleteSong(idx);
+        };
+        
+        li.appendChild(del);
+        ul.appendChild(li);
+    });
+}
+
+function deleteSong(idx) {
+    playlistSongs.splice(idx, 1);
+    savePlaylist();
+    updatePlaylistUI();
+}
+
+function playSongAt(idx) {
+    const song = playlistSongs[idx];
+    if (!song) return;
+    playVideoData(song.id, song.name, song.thumb);
+}
+
+// ----------------- UI / Event Listeners ----------------- //
+function toggleVolumeSlider() {
+    document.querySelector('.volume-container').classList.toggle('show');
+}
+
+document.getElementById('volumeControl').addEventListener('input', function() {
+    if(player && typeof player.setVolume === 'function') {
+        player.setVolume(this.value);
+    }
+});
+
+// Progress Bar Logic (now allows seeking)
+const progressBar = document.getElementById('progressBar');
+progressBar.addEventListener('mousedown', () => isDraggingProgress = true);
+progressBar.addEventListener('touchstart', () => isDraggingProgress = true);
+progressBar.addEventListener('mouseup', () => isDraggingProgress = false);
+progressBar.addEventListener('touchend', () => isDraggingProgress = false);
+
+progressBar.addEventListener('change', function() {
+    if (player && typeof player.getDuration === 'function') {
+        const dur = player.getDuration();
+        const seekTo = (this.value / 100) * dur;
+        player.seekTo(seekTo, true);
+    }
+});
+
+function updateProgress() {
+    if (player && typeof player.getCurrentTime === 'function') {
+        const current = player.getCurrentTime();
+        const dur = player.getDuration();
+        
+        document.getElementById('currentTime').innerText = formatTime(current);
+        if (dur > 0) {
+            document.getElementById('totalTime').innerText = formatTime(dur);
+            if (!isDraggingProgress) { // Prevents jumping when user drags bar
+                document.getElementById('progressBar').value = (current / dur) * 100 || 0;
+            }
+        }
+    }
+}
+
+// Enter Key Support for UX
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchSong();
+});
+document.getElementById('playlistInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') addPlaylistInputSong();
+});
+
+// Init
+updatePlaylistUI();
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+document.body.appendChild(tag);
+</script>
+
 </body>
 </html>
