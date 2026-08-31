@@ -5,7 +5,7 @@
   <title>Foxxy Music</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    /* Buttons (global) */
+    /* Global Buttons */
     button {
       user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -363,8 +363,12 @@ let currentSongIndex = -1;
 let currentVideoId = '';
 let isDraggingProgress = false; 
 
-// NEW: Keep track of played songs to prevent loops
-let playedHistory = new Set(); 
+// SPOTIFY VIBE ENGINE STATE
+let playedHistory = new Set();       // Stores Video IDs
+let playedTitleSignatures = new Set(); // Stores Normalized Song Signatures (Prevents same song from diff channel)
+let vibeQueue = [];                  // Smooth Vibe Station Queue
+let currentSeedArtist = "";
+let isFetchingQueue = false;
 
 function getApiKey() {
     const key = apiKeys[currentKeyIndex];
@@ -376,6 +380,64 @@ function formatTime(sec) {
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// ----------------- Spotify-Style Smart Filters ----------------- //
+
+// Generates a unique signature of the song (e.g., "Taylor Swift Blank Space" -> "blankspacetaylorswift")
+function getTitleSignature(title) {
+    return title.toLowerCase()
+        .replace(/\(.*?\)/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/ft\..*|feat\..*/gi, '')
+        .replace(/official video|official audio|lyric video|lyrics|video|audio|hd|4k|mv/gi, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim()
+        .split(/\s+/)
+        .filter(w => w.length > 2)
+        .sort()
+        .join('');
+}
+
+// Filters out YouTube Shorts, TikTok clips, 1-hour loops, covers, reactions, and duplicates
+function isValidMusicTrack(video) {
+    if (!video || !video.id || !video.id.videoId) return false;
+    
+    const videoId = video.id.videoId;
+    const title = video.snippet.title.toLowerCase();
+    
+    // Check ID duplicate
+    if (playedHistory.has(videoId)) return false;
+
+    // Strict Junk & Shorts Filter
+    const BANNED_TERMS = [
+        '#short', '#shorts', 'shorts', 'short', 'tiktok', 'reel', 'reels',
+        '1 hour', '10 hour', 'loop', 'status', 'whatsapp status', 'reaction',
+        'cover', 'tutorial', 'how to', 'behind the scenes', 'trailer', 'teaser',
+        'slowed', 'reverb', 'speed up', 'nightcore', 'full album', 'extended mix', 'instrumental'
+    ];
+
+    for (let term of BANNED_TERMS) {
+        if (title.includes(term)) return false;
+    }
+
+    // Check Title Signature Duplicate (Prevents same song uploaded by different channels)
+    const signature = getTitleSignature(video.snippet.title);
+    if (signature && playedTitleSignatures.has(signature)) return false;
+
+    return true;
+}
+
+// Extract clean artist name from video title or channel
+function extractArtist(channelTitle, title) {
+    let cleanChannel = channelTitle.replace(/ - Topic|VEVO|Official|Music/ig, '').trim();
+    if (title.includes('-')) {
+        const parts = title.split('-');
+        if (parts[0].trim().length > 2) {
+            return parts[0].trim();
+        }
+    }
+    return cleanChannel;
 }
 
 // ----------------- Player Initialization ----------------- //
@@ -410,17 +472,22 @@ function onPlayerStateChange(e) {
     }
 }
 
-// ----------------- Core Playback Functions ----------------- //
-function playVideoData(id, title, thumb) {
+// ----------------- Playback & Vibe Queue Control ----------------- //
+function playVideoData(id, title, thumb, channelTitle = "YouTube Audio") {
     currentVideoId = id;
-    playedHistory.add(id); // ADD TO HISTORY so we don't play it again
+    
+    // Register song to prevent future duplicates
+    playedHistory.add(id);
+    const signature = getTitleSignature(title);
+    if (signature) playedTitleSignatures.add(signature);
     
     if (player && typeof player.loadVideoById === 'function') {
         player.loadVideoById(id);
     }
     
+    const artist = extractArtist(channelTitle, title);
     document.getElementById('videoTitle').innerText = title;
-    document.getElementById('videoArtist').innerText = "YouTube Audio";
+    document.getElementById('videoArtist').innerText = artist;
     document.getElementById('thumbnail').style.backgroundImage = `url(${thumb})`;
     
     document.querySelector('.default-icon').style.display = 'none';
@@ -429,6 +496,15 @@ function playVideoData(id, title, thumb) {
     isPlaying = true;
     document.getElementById('playIcon').style.display = "none";
     document.getElementById('pauseIcon').style.display = "block";
+
+    // Initialize or refresh the Spotify Vibe Radio Queue
+    if (currentSeedArtist !== artist) {
+        currentSeedArtist = artist;
+        vibeQueue = []; // Clear queue for new vibe
+        fetchVibeTracks();
+    } else if (vibeQueue.length < 3) {
+        fetchVibeTracks(); // Refill queue in background
+    }
 }
 
 function togglePlay() {
@@ -440,94 +516,59 @@ function togglePlay() {
     }
 }
 
-// ----------------- The "Smart Autoplay" Engine ----------------- //
+// ----------------- Spotify Vibe Radio Engine ----------------- //
+function fetchVibeTracks() {
+    if (isFetchingQueue || !currentSeedArtist) return;
+    isFetchingQueue = true;
+    
+    const apiKey = getApiKey();
+    // Searches YouTube Music Topic Mixes & Radios for exact genre/vibe matching
+    const query = `"${currentSeedArtist}" radio mix official audio`;
+    
+    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=25&key=${apiKey}`)
+    .then(res => res.json())
+    .then(data => {
+        isFetchingQueue = false;
+        if (!data.items) return;
+        
+        // Filter out Shorts, junk, and duplicates
+        const validTracks = data.items.filter(item => isValidMusicTrack(item));
+        
+        // Slightly shuffle valid tracks to make flow organic
+        validTracks.sort(() => Math.random() - 0.5);
+        
+        vibeQueue.push(...validTracks);
+    })
+    .catch(() => {
+        isFetchingQueue = false;
+    });
+}
+
 function playNextSong() {
+    // 1. If user is currently playing a local playlist, play next item in playlist
     if (currentSongIndex >= 0 && currentSongIndex < playlistSongs.length - 1) {
         currentSongIndex++;
         playSongAt(currentSongIndex);
-    } else {
-        fetchAndPlaySimilarSong(currentVideoId);
+        return;
     }
-}
-
-function fetchAndPlaySimilarSong(videoId) {
-    if (!videoId) return;
-    const apiKey = getApiKey();
     
-    // 1. Fetch current video details to get tags/genres
-    fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`)
-    .then(res => res.json())
-    .then(data => {
-        if (!data.items || !data.items.length) return playRandomFallback();
-        
-        const snippet = data.items[0].snippet;
-        let artistName = snippet.channelTitle.replace(/ - Topic|VEVO/ig, '').trim();
-        
-        // Default search if we can't find good tags
-        let searchQuery = `${artistName} mix`; 
-
-        // 2. Read the video's hidden tags to discover related genres and artists
-        if (snippet.tags && snippet.tags.length > 0) {
-            // Filter out boring generic words
-            const ignored = ['music', 'official', 'video', 'lyrics', 'audio', 'pop'];
-            const goodTags = snippet.tags.filter(t => t.length > 2 && !ignored.includes(t.toLowerCase()));
-            
-            if (goodTags.length > 0) {
-                // Pick a random tag from the song
-                const randomTag = goodTags[Math.floor(Math.random() * goodTags.length)];
-                const r = Math.random();
-                
-                // Randomly branch out to mimic YouTube's algorithm
-                if (r < 0.4) {
-                    // 40% chance: Pivot to the genre or mood of the song (brings in new artists)
-                    searchQuery = `${randomTag} song`;
-                } else if (r < 0.7) {
-                    // 30% chance: Mix the current artist with the genre/tag
-                    searchQuery = `${artistName} ${randomTag}`;
-                } else {
-                    // 30% chance: Look for similar artists
-                    searchQuery = `${artistName} similar artists`;
-                }
-            }
-        }
-
-        // 3. Search for the next song using our generated smart query
-        fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=video&videoCategoryId=10&maxResults=15&key=${apiKey}`)
-        .then(res => res.json())
-        .then(searchData => {
-            if (!searchData.items || !searchData.items.length) return playRandomFallback();
-            
-            // 4. FILTER OUT SONGS WE HAVE ALREADY PLAYED
-            const unplayedVideos = searchData.items.filter(item => !playedHistory.has(item.id.videoId));
-            const results = unplayedVideos.length > 0 ? unplayedVideos : searchData.items;
-            
-            // Pick randomly from top 5 relevant unplayed results
-            const nextVideo = results[Math.floor(Math.random() * Math.min(5, results.length))];
-            
-            currentSongIndex = -1; 
-            playVideoData(nextVideo.id.videoId, nextVideo.snippet.title, nextVideo.snippet.thumbnails.medium.url);
-        })
-        .catch(() => playRandomFallback());
-    })
-    .catch(() => playRandomFallback());
-}
-
-function playRandomFallback() {
-    const apiKey = getApiKey();
-    const terms = ["trending pop hits", "lofi beats", "top 50 songs", "acoustic covers"];
-    const term = terms[Math.floor(Math.random() * terms.length)];
-    
-    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(term)}&type=video&videoCategoryId=10&maxResults=15&key=${apiKey}`)
-    .then(res => res.json())
-    .then(data => {
-        if (data.items && data.items.length > 0) {
-            const unplayedVideos = data.items.filter(item => !playedHistory.has(item.id.videoId));
-            const results = unplayedVideos.length > 0 ? unplayedVideos : data.items;
-            const nextVideo = results[Math.floor(Math.random() * Math.min(5, results.length))];
-            currentSongIndex = -1;
-            playVideoData(nextVideo.id.videoId, nextVideo.snippet.title, nextVideo.snippet.thumbnails.medium.url);
-        }
-    });
+    // 2. Otherwise, play from the Spotify Vibe Queue
+    if (vibeQueue.length > 0) {
+        const nextVideo = vibeQueue.shift();
+        currentSongIndex = -1; // Detach from static playlist
+        playVideoData(
+            nextVideo.id.videoId,
+            nextVideo.snippet.title,
+            nextVideo.snippet.thumbnails.medium.url,
+            nextVideo.snippet.channelTitle
+        );
+    } else {
+        // Fallback if queue empty: Refill immediately
+        fetchVibeTracks();
+        setTimeout(() => {
+            if (vibeQueue.length > 0) playNextSong();
+        }, 1200);
+    }
 }
 
 // ----------------- Searching & Playlist ----------------- //
@@ -536,20 +577,28 @@ function searchSong(query, save = false) {
     if (!query) return;
     
     const apiKey = getApiKey();
-    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoCategoryId=10&maxResults=1`)
+    fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&type=video&videoCategoryId=10&maxResults=5`)
     .then(res => res.json())
     .then(data => {
         if (!data.items || !data.items.length) return;
-        const video = data.items[0];
+        
+        // Find first valid non-short track
+        const video = data.items.find(item => isValidMusicTrack(item)) || data.items[0];
         
         if (!save) {
             currentSongIndex = -1; 
-            playVideoData(video.id.videoId, video.snippet.title, video.snippet.thumbnails.medium.url);
+            playVideoData(
+                video.id.videoId,
+                video.snippet.title,
+                video.snippet.thumbnails.medium.url,
+                video.snippet.channelTitle
+            );
         } else {
             playlistSongs.push({
                 name: video.snippet.title,
                 thumb: video.snippet.thumbnails.default.url,
-                id: video.id.videoId
+                id: video.id.videoId,
+                channel: video.snippet.channelTitle
             });
             savePlaylist();
             updatePlaylistUI();
@@ -590,7 +639,7 @@ function updatePlaylistUI() {
         li.onclick = function(e) {
             if (e.target.classList.contains('delete-btn')) return;
             currentSongIndex = idx;
-            playVideoData(song.id, song.name, song.thumb);
+            playVideoData(song.id, song.name, song.thumb, song.channel || "YouTube Audio");
         };
         
         const del = document.createElement('button');
@@ -615,7 +664,7 @@ function deleteSong(idx) {
 function playSongAt(idx) {
     const song = playlistSongs[idx];
     if (!song) return;
-    playVideoData(song.id, song.name, song.thumb);
+    playVideoData(song.id, song.name, song.thumb, song.channel || "YouTube Audio");
 }
 
 // ----------------- UI / Event Listeners ----------------- //
@@ -636,7 +685,7 @@ progressBar.addEventListener('mouseup', () => isDraggingProgress = false);
 progressBar.addEventListener('touchend', () => isDraggingProgress = false);
 
 progressBar.addEventListener('change', function() {
-    if (player && typeof player.getDuration === 'function') {
+   if (player && typeof player.getDuration === 'function') {
         const dur = player.getDuration();
         const seekTo = (this.value / 100) * dur;
         player.seekTo(seekTo, true);
@@ -659,6 +708,9 @@ function updateProgress() {
 }
 
 document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchSong();
+});
+document.getElementById('playlistInput').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') addPlaylistInputSong();
 });
 
